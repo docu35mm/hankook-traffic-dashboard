@@ -7,105 +7,136 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary-color: #2c3e50; --bg-color: #f8f9fa; }
-        body { font-family: 'Pretendard', sans-serif; background: var(--bg-color); margin: 0; padding: 40px; color: #333; }
-        header { text-align: center; margin-bottom: 50px; border-bottom: 3px solid var(--primary-color); padding-bottom: 20px; }
-        .meta-info { color: #666; margin-top: 10px; }
+        body { font-family: 'Pretendard', sans-serif; background: var(--bg-color); margin: 0; padding: 20px; display: none; } /* 인증 전까지 숨김 */
+        header { text-align: center; margin-bottom: 40px; border-bottom: 3px solid var(--primary-color); padding-bottom: 20px; }
         
-        /* 블럭 형태의 큰 제목 (아코디언) */
+        /* 암호 입력창 스타일 */
+        #login-screen { 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            height: 100vh; background: var(--primary-color); color: white; 
+        }
+        #login-screen input { padding: 10px; font-size: 1rem; border-radius: 5px; border: none; margin-top: 10px; }
+
+        /* 대제목 블럭 */
         .main-block { 
             background: #fff; border: 1px solid #ddd; border-radius: 12px; 
-            margin-bottom: 15px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
         .block-header { 
             padding: 20px 30px; display: flex; justify-content: space-between; 
-            align-items: center; cursor: pointer; background: #fff; transition: 0.3s;
+            align-items: center; cursor: pointer;
         }
-        .block-header:hover { background: #f1f1f1; }
-        .block-header h2 { margin: 0; font-size: 1.2rem; color: var(--primary-color); }
-        
-        /* 소제목 및 표 영역 */
-        .sub-content { display: none; padding: 0 30px 20px; border-top: 1px dashed #eee; }
-        .sub-title { 
-            padding: 15px 0; font-weight: bold; color: #555; 
-            cursor: pointer; display: flex; align-items: center;
-        }
-        .sub-title:before { content: '└ '; margin-right: 10px; }
-        
-        /* 각주 스타일 */
-        .footnote { padding: 15px 30px; background: #fffbe6; font-size: 0.9rem; color: #856404; border-top: 1px solid #ffe58f; }
-        
-        /* 차트 컨테이너 */
-        .chart-container { width: 100%; height: 350px; margin-top: 20px; display: none; }
-        .plus-icon { font-size: 1.5rem; font-weight: bold; }
+        .sub-content { display: none; padding: 20px 30px; border-top: 1px dashed #eee; }
+        .footnote { padding: 15px 30px; background: #fffbe6; font-size: 0.9rem; color: #856404; }
+        .chart-container { width: 100%; height: 400px; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-<header>
-    <h1>한국일보 트래픽 개선 점검</h1>
-    <div class="meta-info">만든이: 김주성 | 날짜: 2026.05.15</div>
-</header>
+<div id="login-screen">
+    <h1>보안 페이지</h1>
+    <p>비밀번호를 입력하세요.</p>
+    <input type="password" id="password-input" onkeypress="checkPassword(event)">
+</div>
 
-<div id="dashboard">
-    <div class="main-block">
-        <div class="block-header" onclick="toggleBlock(this)">
-            <h2>1. 주요트래픽추이</h2>
-            <span class="plus-icon">+</span>
-        </div>
-        <div class="sub-content">
-            <div class="sub-title" onclick="toggleSub('trafficChart')">전체 트래픽 선형 차트 (보기/닫기)</div>
-            <div id="trafficChart" class="chart-container">
-                <canvas id="myChart"></canvas>
-            </div>
-            </div>
-        <div class="footnote">
-            * 각주: 개편 전후 트래픽 구치 직접 비교가 어려워 3월부터 측정 비교함.
-        </div>
-    </div>
+<div id="main-content" style="display:none;">
+    <header>
+        <h1>한국일보 트래픽 개선 점검</h1>
+        <div style="color:#666;">만든이: 김주성 | 날짜: 2026.05.15</div>
+    </header>
 
     <div class="main-block">
         <div class="block-header" onclick="toggleBlock(this)">
-            <h2>2. 플랫폼과제 진행상황</h2>
-            <span class="plus-icon">+</span>
+            <h2 id="sheet-title-1">1. 주요트래픽추이</h2>
+            <span>+</span>
         </div>
         <div class="sub-content">
-            <div class="sub-title">시트 내 세부 데이터가 표시됩니다.</div>
+            <div onclick="toggleChart()"><strong>+ 소제목: 트래픽 추이 그래프 (클릭)</strong></div>
+            <div id="chart-wrapper" class="chart-container" style="display:none;">
+                <canvas id="trafficChart"></canvas>
+            </div>
+        </div>
+        <div class="footnote" id="footnote-1">
+            * 각주: 데이터를 불러오는 중...
         </div>
     </div>
 </div>
 
 <script>
-    // 아코디언 제어 함수
+    // 1. 비밀번호 설정 (원하는 비번으로 수정하세요)
+    const SECRET_PASSWORD = "2580"; 
+
+    function checkPassword(e) {
+        if (e.key === 'Enter') {
+            const input = document.getElementById('password-input').value;
+            if (input === SECRET_PASSWORD) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+                document.body.style.display = 'block';
+                loadSheetData(); // 인증 성공 시 데이터 로드
+            } else {
+                alert("비밀번호가 틀렸습니다.");
+            }
+        }
+    }
+
+    // 2. 구글 시트 데이터 가져오기 (CSV 주소)
+    // 주의: 시트에서 '웹에 게시' -> '쉼표로 구분된 값(.csv)'으로 링크를 복사해 넣으세요.
+    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSJ8Y4cUPlk5PCmZyt9qcCdGIUCuLaUdSMlOUWLshCiGvVGwar6Qc9DA2JWPF56WFms4ArBSNayUwPm/pub?output=csv';
+
+    async function loadSheetData() {
+        try {
+            const response = await fetch(SHEET_CSV_URL);
+            const data = await response.text();
+            const rows = data.split('\n').map(row => row.split(','));
+
+            // 예시: A4, B4 등의 위치에 맞춰 데이터 추출
+            // rows[행번호][열번호] (0부터 시작하므로 A4는 rows[3][0])
+            const labels = ['3월', '4월', '5월']; 
+            const trafficData = [
+                parseFloat(rows[3][1]), // B4 데이터
+                parseFloat(rows[4][1]), // B5 데이터
+                parseFloat(rows[5][1])  // B6 데이터
+            ].filter(val => !isNaN(val)); // 입력된 숫자까지만 반영
+
+            renderChart(labels.slice(0, trafficData.length), trafficData);
+            
+            // 각주 업데이트 (예: 시트의 특정 셀 내용)
+            document.getElementById('footnote-1').innerText = "* 각주: " + (rows[10] ? rows[10][0] : "시트의 각주 내용을 확인하세요.");
+
+        } catch (error) {
+            console.error("데이터 로드 실패:", error);
+        }
+    }
+
+    function renderChart(labels, data) {
+        const ctx = document.getElementById('trafficChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '트래픽 수치',
+                    data: data,
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
     function toggleBlock(el) {
         const content = el.nextElementSibling;
-        const icon = el.querySelector('.plus-icon');
-        const isOpen = content.style.display === 'block';
-        content.style.display = isOpen ? 'none' : 'block';
-        icon.innerText = isOpen ? '+' : '-';
+        content.style.display = content.style.display === 'block' ? 'none' : 'block';
     }
 
-    function toggleSub(id) {
-        const chart = document.getElementById(id);
-        chart.style.display = chart.style.display === 'block' ? 'none' : 'block';
+    function toggleChart() {
+        const wrapper = document.getElementById('chart-wrapper');
+        wrapper.style.display = wrapper.style.display === 'block' ? 'none' : 'block';
     }
-
-    // Chart.js 구현 (시트 데이터 입력 시나리오)
-    const ctx = document.getElementById('myChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['3월', '4월', '5월'], // 시트의 월 데이터
-            datasets: [{
-                label: '월별 트래픽',
-                data: [8593954, 9442960], // 시트에 입력된 값 (예시)
-                borderColor: '#3498db',
-                fill: false,
-                tension: 0.2
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
 </script>
-
 </body>
 </html>
