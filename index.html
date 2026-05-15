@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>한국일보 트래픽 개선 점검</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary-color: #2c3e50; --bg-color: #f8f9fa; }
+        body { font-family: 'Pretendard', sans-serif; background: var(--bg-color); margin: 0; padding: 40px; color: #333; }
+        header { text-align: center; margin-bottom: 50px; border-bottom: 3px solid var(--primary-color); padding-bottom: 20px; }
+        .meta-info { color: #666; margin-top: 10px; }
+        
+        /* 블럭 형태의 큰 제목 (아코디언) */
+        .main-block { 
+            background: #fff; border: 1px solid #ddd; border-radius: 12px; 
+            margin-bottom: 15px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .block-header { 
+            padding: 20px 30px; display: flex; justify-content: space-between; 
+            align-items: center; cursor: pointer; background: #fff; transition: 0.3s;
+        }
+        .block-header:hover { background: #f1f1f1; }
+        .block-header h2 { margin: 0; font-size: 1.2rem; color: var(--primary-color); }
+        
+        /* 소제목 및 표 영역 */
+        .sub-content { display: none; padding: 0 30px 20px; border-top: 1px dashed #eee; }
+        .sub-title { 
+            padding: 15px 0; font-weight: bold; color: #555; 
+            cursor: pointer; display: flex; align-items: center;
+        }
+        .sub-title:before { content: '└ '; margin-right: 10px; }
+        
+        /* 각주 스타일 */
+        .footnote { padding: 15px 30px; background: #fffbe6; font-size: 0.9rem; color: #856404; border-top: 1px solid #ffe58f; }
+        
+        /* 차트 컨테이너 */
+        .chart-container { width: 100%; height: 350px; margin-top: 20px; display: none; }
+        .plus-icon { font-size: 1.5rem; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>한국일보 트래픽 개선 점검</h1>
+    <div class="meta-info">만든이: 김주성 | 날짜: 2026.05.15</div>
+</header>
+
+<div id="dashboard">
+    <div class="main-block">
+        <div class="block-header" onclick="toggleBlock(this)">
+            <h2>1. 주요트래픽추이</h2>
+            <span class="plus-icon">+</span>
+        </div>
+        <div class="sub-content">
+            <div class="sub-title" onclick="toggleSub('trafficChart')">전체 트래픽 선형 차트 (보기/닫기)</div>
+            <div id="trafficChart" class="chart-container">
+                <canvas id="myChart"></canvas>
+            </div>
+            </div>
+        <div class="footnote">
+            * 각주: 개편 전후 트래픽 구치 직접 비교가 어려워 3월부터 측정 비교함.
+        </div>
+    </div>
+
+    <div class="main-block">
+        <div class="block-header" onclick="toggleBlock(this)">
+            <h2>2. 플랫폼과제 진행상황</h2>
+            <span class="plus-icon">+</span>
+        </div>
+        <div class="sub-content">
+            <div class="sub-title">시트 내 세부 데이터가 표시됩니다.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 아코디언 제어 함수
+    function toggleBlock(el) {
+        const content = el.nextElementSibling;
+        const icon = el.querySelector('.plus-icon');
+        const isOpen = content.style.display === 'block';
+        content.style.display = isOpen ? 'none' : 'block';
+        icon.innerText = isOpen ? '+' : '-';
+    }
+
+    function toggleSub(id) {
+        const chart = document.getElementById(id);
+        chart.style.display = chart.style.display === 'block' ? 'none' : 'block';
+    }
+
+    // Chart.js 구현 (시트 데이터 입력 시나리오)
+    const ctx = document.getElementById('myChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['3월', '4월', '5월'], // 시트의 월 데이터
+            datasets: [{
+                label: '월별 트래픽',
+                data: [8593954, 9442960], // 시트에 입력된 값 (예시)
+                borderColor: '#3498db',
+                fill: false,
+                tension: 0.2
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+</script>
+
+</body>
+</html>
