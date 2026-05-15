@@ -5,115 +5,170 @@
     <title>한국일보 트래픽 개선 점검</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary-color: #2c3e50; }
-        body { font-family: 'Pretendard', sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+        :root { --primary: #2c3e50; --bg: #f1f2f6; --white: #ffffff; }
+        body { font-family: 'Pretendard', sans-serif; margin: 0; background: var(--bg); color: #333; }
         
-        /* 암호창 */
-        #login-screen { 
-            position: fixed; top:0; left:0; width:100%; height:100%; 
-            background: #2c3e50; color:white; display:flex; flex-direction:column; 
-            align-items:center; justify-content:center; z-index:1000;
-        }
-        #login-screen input { padding: 12px; border-radius: 8px; border:none; width:200px; margin-top:15px; text-align:center; }
+        /* 암호 인증 화면 */
+        #login-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--primary); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:1000; }
+        #login-screen input { padding: 12px; border-radius: 8px; border:none; width:220px; margin-top:15px; text-align:center; }
 
-        header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 15px; }
-        .main-block { background: #fff; border: 1px solid #ddd; margin-bottom: 10px; border-radius: 8px; }
-        .block-header { padding: 20px; cursor: pointer; display: flex; justify-content: space-between; font-weight: bold; }
-        .sub-content { display: none; padding: 20px; border-top: 1px solid #eee; }
-        .chart-container { width: 100%; height: 350px; }
-        .footnote { padding: 15px; background: #fffbe6; font-size: 0.9rem; border-top: 1px solid #ffe58f; }
+        header { background: var(--white); padding: 30px; text-align: center; border-bottom: 3px solid var(--primary); }
+        .container { max-width: 1100px; margin: 20px auto; padding: 0 20px 50px; }
+
+        .main-block { background: var(--white); border: 1px solid #ddd; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .block-header { padding: 20px 25px; cursor: pointer; display: flex; justify-content: space-between; font-weight: bold; font-size: 1.2rem; }
+        .sub-container { display: none; padding: 10px 25px 25px; border-top: 1px solid #eee; }
+        
+        .sub-title { padding: 12px 15px; background: #edf2f7; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 15px; display: flex; justify-content: space-between; }
+        .data-area { display: none; margin-top: 15px; }
+
+        /* 표 스타일 */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th, td { border: 1px solid #dee2e6; padding: 12px; text-align: center; }
+        th { background: #f8f9fa; font-weight: bold; }
+
+        .chart-container { width: 100%; height: 380px; }
+        .footnote { padding: 15px 25px; background: #fffbe6; font-size: 0.85rem; color: #856404; border-top: 1px solid #ffe58f; }
     </style>
 </head>
 <body>
 
 <div id="login-screen">
-    <h2>🔒 보안 인증</h2>
-    <p>비밀번호를 입력하고 Enter를 누르세요.</p>
-    <input type="password" id="pw" placeholder="Password" onkeypress="if(event.keyCode==13) verify()">
+    <h2>🔒 한국일보 트래픽 점검 시스템</h2>
+    <input type="password" id="pw" placeholder="비밀번호 입력 (1234)" onkeypress="if(event.keyCode==13) verify()">
 </div>
 
-<div id="wrapper" style="visibility: hidden;">
+<div id="wrapper" style="display: none;">
     <header>
         <h1>한국일보 트래픽 개선 점검</h1>
         <p>만든이: 김주성 | 날짜: 2026.05.15</p>
     </header>
 
-    <div class="main-block">
-        <div class="block-header" onclick="toggle(this)">
-            <span>1. 주요트래픽추이</span><span>+</span>
+    <div class="container">
+        <div class="main-block">
+            <div class="block-header" onclick="toggle(this)"><span>1. 주요트래픽추이</span><span>+</span></div>
+            <div class="sub-container">
+                <div class="sub-title" onclick="toggleSub(this)">1. 닷컴 트래픽 추이 (숫자 표) <span>▼</span></div>
+                <div class="data-area" id="table-1-1"></div>
+
+                <div class="sub-title" onclick="toggleSub(this)">2. 유입경로별 방문자수 추이 (누적 막대) <span>▼</span></div>
+                <div class="data-area"><div class="chart-container"><canvas id="chart-1-2"></canvas></div></div>
+
+                <div class="sub-title" onclick="toggleSub(this)">3. 외부 포털 트래픽 추이 (선형 차트) <span>▼</span></div>
+                <div class="data-area"><div class="chart-container"><canvas id="chart-1-3"></canvas></div></div>
+            </div>
+            <div class="footnote" id="note-1">각주: 3월 측정치부터 비교 적용</div>
         </div>
-        <div class="sub-content">
-            <p><strong>└ 주요 트래픽 선형 차트</strong></p>
-            <div class="chart-container">
-                <canvas id="trafficChart"></canvas>
+
+        <div class="main-block">
+            <div class="block-header" onclick="toggle(this)"><span>2. 플랫폼과제 진행 상황</span><span>+</span></div>
+            <div class="sub-container">
+                <div class="sub-title" onclick="toggleSub(this)">1. 플랫폼 부문 과제 수행 점검 <span>▼</span></div>
+                <div class="data-area" id="table-2-1"></div>
             </div>
         </div>
-        <div id="note1" class="footnote">각주: 데이터를 불러오는 중...</div>
+
+        <div class="main-block">
+            <div class="block-header" onclick="toggle(this)"><span>3. 뉴스룸전략진행상황</span><span>+</span></div>
+            <div class="sub-container">
+                <div class="sub-title" onclick="toggleSub(this)">1. 현황 <span>▼</span></div><div class="data-area" id="table-3-1"></div>
+                <div class="sub-title" onclick="toggleSub(this)">2. 대응전략 <span>▼</span></div><div class="data-area" id="table-3-2"></div>
+                <div class="sub-title" onclick="toggleSub(this)">3. 남은 과제 <span>▼</span></div><div class="data-area" id="table-3-3"></div>
+            </div>
+        </div>
+
+        <div class="main-block">
+            <div class="block-header" onclick="toggle(this)"><span>4. 기타 진행상황</span><span>+</span></div>
+            <div class="sub-container">
+                <div class="sub-title" onclick="toggleSub(this)">1. 협의사항 <span>▼</span></div><div class="data-area" id="table-4-1"></div>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
-    const PASS = "1234"; // 비밀번호 설정
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSJ8Y4cUPlk5PCmZyt9qcCdGIUCuLaUdSMlOUWLshCiGvVGwar6Qc9DA2JWPF56WFms4ArBSNayUwPm/pub?output=csv";
+    const PASS = "1234";
+    // 시트 ID (문서 주소에서 추출)
+    const S_ID = "14mOvdmVfVP5ck9L2hKQQppgbFjjYAa3DCfoG2sehQh0";
+    
+    // 각 시트별 gid 설정
+    const GIDS = {
+        TRAFFIC: "0",
+        PLATFORM: "1506456079",
+        STRATEGY: "1557999824",
+        ETC: "1245395043"
+    };
 
     function verify() {
         if(document.getElementById('pw').value === PASS) {
             document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('wrapper').style.visibility = 'visible';
-            fetchData();
-        } else {
-            alert("틀렸습니다.");
-        }
-    }
-
-    async function fetchData() {
-        try {
-            const res = await fetch(CSV_URL);
-            const text = await res.text();
-            // CSV 파싱 (줄바꿈 및 쉼표 기준)
-            const rows = text.split('\n').map(row => row.split(','));
-
-            /* [데이터 매칭 가이드] 
-               rows[3][1] = B4 셀 (주요 트래픽 값)
-               rows[4][1] = B5 셀
-            */
-            const trafficValues = [
-                parseFloat(rows[3][1]), 
-                parseFloat(rows[4][1]), 
-                parseFloat(rows[5][1])
-            ].filter(v => !isNaN(v));
-
-            drawChart(trafficValues);
-            
-            // 각주 매칭 (예: 시트의 특정 위치)
-            if(rows[10]) document.getElementById('note1').innerText = "각주: " + rows[10][0];
-            
-        } catch (e) {
-            console.error("데이터 로드 에러:", e);
-        }
-    }
-
-    function drawChart(dataPoints) {
-        new Chart(document.getElementById('trafficChart'), {
-            type: 'line',
-            data: {
-                labels: ['3월', '4월', '5월', '6월'].slice(0, dataPoints.length),
-                datasets: [{
-                    label: '트래픽 수치',
-                    data: dataPoints,
-                    borderColor: '#3498db',
-                    tension: 0.3,
-                    fill: true,
-                    backgroundColor: 'rgba(52, 152, 219, 0.1)'
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
+            document.getElementById('wrapper').style.display = 'block';
+            fetchAllData();
+        } else { alert("비밀번호가 틀렸습니다."); }
     }
 
     function toggle(el) {
-        const content = el.nextElementSibling;
-        content.style.display = (content.style.display === 'block') ? 'none' : 'block';
+        const next = el.nextElementSibling;
+        next.style.display = next.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function toggleSub(el) {
+        const next = el.nextElementSibling;
+        next.style.display = next.style.display === 'block' ? 'none' : 'block';
+    }
+
+    async function getSheet(gid) {
+        const url = `https://docs.google.com/spreadsheets/d/${S_ID}/export?format=csv&gid=${gid}`;
+        const res = await fetch(url);
+        const csv = await res.text();
+        return csv.split('\n').map(r => r.split(','));
+    }
+
+    async function fetchAllData() {
+        try {
+            // 1. 주요트래픽추이 데이터 로드 
+            const trafficRows = await getSheet(GIDS.TRAFFIC);
+            const labels = trafficRows[2].slice(1, 13); // 2026년 월별 라벨
+            const values = trafficRows[3].slice(1, 13).map(v => parseFloat(v.replace(/,/g, ''))).filter(v => !isNaN(v));
+
+            // 표 1-1 생성
+            renderTable('table-1-1', trafficRows.slice(2, 5));
+
+            // 차트 1-3 (선형 차트) - 실제 입력된 숫자만큼만 출력 
+            new Chart(document.getElementById('chart-1-3'), {
+                type: 'line',
+                data: {
+                    labels: labels.slice(0, values.length),
+                    datasets: [{ label: '월별 트래픽', data: values, borderColor: '#3498db', tension: 0.3, fill: true }]
+                }
+            });
+
+            // 2. 플랫폼과제 데이터 로드
+            const platformRows = await getSheet(GIDS.PLATFORM);
+            renderTable('table-2-1', platformRows.slice(0, 10));
+
+            // 3. 기타 시트 데이터들 순차 로드 및 렌더링
+            const strategyRows = await getSheet(GIDS.STRATEGY);
+            renderTable('table-3-1', strategyRows.slice(0, 5));
+            
+            const etcRows = await getSheet(GIDS.ETC);
+            renderTable('table-4-1', etcRows.slice(0, 8));
+
+        } catch (e) { console.error("데이터 로드 실패:", e); }
+    }
+
+    function renderTable(targetId, data) {
+        let html = '<table><thead><tr>';
+        data[0].forEach(h => html += `<th>${h}</th>`);
+        html += '</tr></thead><tbody>';
+        for(let i=1; i<data.length; i++) {
+            if(!data[i][0]) continue;
+            html += '<tr>';
+            data[i].forEach(d => html += `<td>${d || '-'}</td>`);
+            html += '</tr>';
+        }
+        html += '</tbody></table>';
+        document.getElementById(targetId).innerHTML = html;
     }
 </script>
 </body>
