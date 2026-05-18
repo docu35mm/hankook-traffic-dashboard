@@ -181,20 +181,18 @@ async function loadSheet(container, sheet, id) {
 
     const canvasId = makeSafeId(`chart-${id}-${sheet.gid}`);
 
-    container.innerHTML = `
-      <div class="chartTableGrid">
-        <div>
-          <h3>${sheet.title}</h3>
-          ${renderTable(rows)}
-        </div>
-        <div>
-          <h3>${sheet.title}</h3>
-          <div class="chartBox">
-            <canvas id="${canvasId}"></canvas>
-          </div>
-        </div>
+  container.innerHTML = `
+  <div class="chartTableGrid">
+    <div>
+      ${renderTable(rows)}
+    </div>
+    <div>
+      <div class="chartBox">
+        <canvas id="${canvasId}"></canvas>
       </div>
-    `;
+    </div>
+  </div>
+`;
 
     requestAnimationFrame(() => {
       if (sheet.type === "stackedBar") {
