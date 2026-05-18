@@ -1,0 +1,294 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif;
+  background: #f4f6f8;
+  color: #222;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* 로그인 화면 */
+
+#loginScreen {
+  min-height: 100vh;
+  background: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.loginBox {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 36px 30px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.loginBox h1 {
+  margin: 0 0 12px;
+  font-size: 26px;
+}
+
+.loginBox p {
+  color: #555;
+}
+
+.loginBox input {
+  width: 100%;
+  margin-top: 18px;
+  padding: 15px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+.loginBox button {
+  width: 100%;
+  margin-top: 14px;
+  padding: 15px;
+  border: none;
+  border-radius: 10px;
+  background: #111827;
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#loginMessage {
+  margin-top: 12px;
+  color: #d00000;
+  font-size: 14px;
+}
+
+/* 상단 */
+
+.topHeader {
+  background: #111827;
+  color: white;
+  padding: 38px 24px 28px;
+}
+
+.topHeader h1 {
+  text-align: center;
+  margin: 0;
+  font-size: 34px;
+}
+
+.subtitle {
+  text-align: center;
+  margin: 10px 0 30px;
+  font-size: 16px;
+  color: #d1d5db;
+}
+
+.meta {
+  max-width: 1180px;
+  margin: 0 auto;
+  text-align: right;
+  color: #e5e7eb;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.meta p {
+  margin: 2px 0;
+}
+
+/* 본문 */
+
+main {
+  max-width: 1180px;
+  margin: 28px auto 60px;
+  padding: 0 18px;
+}
+
+.noticeBox {
+  background: #fff;
+  border-left: 6px solid #111827;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+
+.noticeBox h2 {
+  margin: 0 0 14px;
+  font-size: 22px;
+}
+
+.noticeBox p {
+  margin: 8px 0;
+  line-height: 1.7;
+}
+
+.controlButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.controlButtons button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  background: #374151;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.accordion {
+  background: white;
+  border-radius: 16px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+
+.accordionHeader {
+  width: 100%;
+  border: none;
+  background: white;
+  padding: 20px 22px;
+  font-size: 22px;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.accordionHeader:hover {
+  background: #f9fafb;
+}
+
+.plus {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.accordionBody {
+  display: none;
+  padding: 0 20px 22px;
+}
+
+.accordion.open > .accordionBody {
+  display: block;
+}
+
+.accordion.open > .accordionHeader .plus {
+  transform: rotate(45deg);
+}
+
+.subAccordion {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  margin: 14px 0;
+  overflow: hidden;
+}
+
+.subAccordionHeader {
+  width: 100%;
+  border: none;
+  background: #f9fafb;
+  padding: 16px 18px;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+}
+
+.subAccordionBody {
+  display: none;
+  padding: 18px;
+  background: white;
+}
+
+.subAccordion.open > .subAccordionBody {
+  display: block;
+}
+
+.status {
+  color: #666;
+  padding: 16px 0;
+}
+
+/* 표 */
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 15px;
+  background: white;
+}
+
+th,
+td {
+  border: 1px solid #d8dde3;
+  padding: 12px 14px;
+  vertical-align: top;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+
+th {
+  background: #f1f3f5;
+  font-weight: 800;
+  text-align: center;
+}
+
+td {
+  text-align: left;
+}
+
+canvas {
+  margin-top: 24px;
+  max-height: 460px;
+}
+
+.error {
+  color: #d00000;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .topHeader h1 {
+    font-size: 26px;
+  }
+
+  .accordionHeader {
+    font-size: 19px;
+  }
+
+  .subAccordionHeader {
+    font-size: 16px;
+  }
+
+  th,
+  td {
+    font-size: 14px;
+    padding: 10px;
+  }
+}

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>한국일보 트래픽 점검 회의</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <section id="loginScreen">
+    <div class="loginBox">
+      <h1>한국일보 트래픽 점검 회의</h1>
+      <p>비밀번호를 입력해 주세요</p>
+      <input id="passwordInput" type="password" placeholder="비밀번호" />
+      <button id="loginButton">입장</button>
+      <p id="loginMessage"></p>
+    </div>
+  </section>
+
+  <section id="appScreen" class="hidden">
+    <header class="topHeader">
+      <h1>한국일보 트래픽 점검 회의</h1>
+      <p class="subtitle">콘텐츠본부 일백만 회의</p>
+
+      <div class="meta">
+        <p>만든 날짜: 2026년 5월 18일</p>
+        <p>만든 이: 김주성</p>
+      </div>
+    </header>
+
+    <main>
+      <section class="noticeBox">
+        <h2>안내</h2>
+        <p>
+          본 앱은 한국일보 콘텐츠본부 일백만 트래픽 회의용으로 제작이 되어 있습니다.
+          각 부분에서 스프레드시트에 입력을 하시면 해당 부분이 업데이트 됩니다.
+        </p>
+        <p>
+          한국일보 구성원이 아닌 이들의 접근은 차단합니다. 링크 외부 유출은 금합니다.
+        </p>
+        <p>
+          외부 유출 시 민형사상 책임을 물을 수 있습니다.
+        </p>
+      </section>
+
+      <div class="controlButtons">
+        <button id="openAllButton">전체 펼치기</button>
+        <button id="closeAllButton">전체 접기</button>
+      </div>
+
+      <section id="dashboard"></section>
+    </main>
+  </section>
+
+  <script src="script.js"></script>
+</body>
+</html>
