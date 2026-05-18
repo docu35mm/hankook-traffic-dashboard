@@ -170,7 +170,7 @@ async function loadSheet(container, sheet, id) {
           ${renderTable(rows)}
         </div>
         <div>
-          <h3>${sheet.title.replace(/^2_2\.|^2_3\./, "").trim()}</h3>
+          <h3>${sheet.title}</h3>
           <div class="chartBox">
             <canvas id="${canvasId}"></canvas>
           </div>
@@ -179,11 +179,49 @@ async function loadSheet(container, sheet, id) {
     `;
 
     if (sheet.type === "stackedBarWithTable") {
-      renderStackedBar(canvasId, rows);
+      renderStackedBarFromWideTable(canvasId, rows);
     }
 
     if (sheet.type === "lineWithTable") {
-      renderLineChart(canvasId, rows);
+      renderLineFromWideTable(canvasId, rows);
+    }
+  } catch (error) {
+    container.innerHTML = `<p class="error">데이터를 불러오지 못했습니다.</p>`;
+  }
+}async function loadSheet(container, sheet, id) {
+  container.innerHTML = `<p class="status">데이터를 불러오는 중입니다.</p>`;
+
+  try {
+    const rows = await fetchSheetRows(sheet.gid);
+
+    if (sheet.type === "table") {
+      container.innerHTML = renderTable(rows);
+      return;
+    }
+
+    const canvasId = `chart-${id}`;
+
+    container.innerHTML = `
+      <div class="chartTableGrid">
+        <div>
+          <h3>${sheet.title}</h3>
+          ${renderTable(rows)}
+        </div>
+        <div>
+          <h3>${sheet.title}</h3>
+          <div class="chartBox">
+            <canvas id="${canvasId}"></canvas>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (sheet.type === "stackedBarWithTable") {
+      renderStackedBarFromWideTable(canvasId, rows);
+    }
+
+    if (sheet.type === "lineWithTable") {
+      renderLineFromWideTable(canvasId, rows);
     }
   } catch (error) {
     container.innerHTML = `<p class="error">데이터를 불러오지 못했습니다.</p>`;
@@ -374,5 +412,125 @@ async function openAll() {
 function closeAll() {
   document.querySelectorAll(".accordion, .subAccordion").forEach(el => {
     el.classList.remove("open");
+  });
+}
+
+function normalizeWideTable(rows) {
+  const monthRowIndex = rows.findIndex(row =>
+    row.some(cell => /월$/.test(String(cell).trim()))
+  );
+
+  if (monthRowIndex === -1) {
+    return { labels: [], datasets: [] };
+  }
+
+  const monthRow = rows[monthRowIndex];
+
+  const monthColumns = monthRow
+    .map((cell, index) => ({
+      month: String(cell).trim(),
+      index
+    }))
+    .filter(item => /월$/.test(item.month));
+
+  const dataRows = rows
+    .slice(monthRowIndex + 1)
+    .filter(row => {
+      const name = String(row[0] || "").trim();
+      return name !== "" && !name.includes("증가율");
+    });
+
+  const labels = monthColumns.map(item => item.month);
+
+  const datasets = dataRows.map(row => ({
+    label: String(row[0]).trim(),
+    data: monthColumns.map(item => toNumber(row[item.index]))
+  }));
+
+  return { labels, datasets };
+}
+
+function renderStackedBarFromWideTable(canvasId, rows) {
+  const { labels, datasets } = normalizeWideTable(rows);
+
+  createChart(canvasId, {
+    type: "bar",
+    data: {
+      labels,
+      datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          position: "right"
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${formatNumber(ctx.raw)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: true
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          ticks: {
+            callback: value => formatNumber(value)
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderLineFromWideTable(canvasId, rows) {
+  const { labels, datasets } = normalizeWideTable(rows);
+
+  createChart(canvasId, {
+    type: "line",
+    data: {
+      labels,
+      datasets: datasets.map(ds => ({
+        ...ds,
+        tension: 0.25,
+        pointRadius: 3,
+        pointHoverRadius: 6
+      }))
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          position: "top"
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${formatNumber(ctx.raw)}`
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: value => formatNumber(value)
+          }
+        }
+      }
+    }
   });
 }

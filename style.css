@@ -307,25 +307,18 @@ td {
 .chartBox {
   height: 360px;
   width: 100%;
+  min-height: 360px;
 }
 
-.chartTableGrid table {
-  font-size: 13px;
-}
-
-.chartTableGrid th,
-.chartTableGrid td {
-  padding: 7px 9px;
-  text-align: center;
-  line-height: 1.45;
+.chartTableGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
 }
 
 @media (max-width: 900px) {
   .chartTableGrid {
     grid-template-columns: 1fr;
-  }
-
-  .chartBox {
-    height: 420px;
   }
 }
