@@ -1,85 +1,31 @@
 const APP_PASSWORD = "hankook2026";
-// 원하는 비밀번호로 바꾸세요.
 
 const SHEET_ID = "14mOvdmVfVP5ck9L2hKQQppgbFjjYAa3DCfoG2sehQh0";
 
 const sheets = {
-  overview: {
-    title: "1. 개요",
-    gid: "737075050",
-    type: "table"
-  },
-  dotcomTraffic: {
-    title: "2_1. 닷컴 트래픽 추이",
-    gid: "0",
-    type: "table"
-  },
-  inflowTraffic: {
-    title: "2_2. 닷컴 유입경로별 방문자수 추이",
-    gid: "354858249",
-    type: "stackedBar"
-  },
-  portalTraffic: {
-    title: "2_3. 외부 포털 트래픽 추이",
-    gid: "2120757618",
-    type: "line"
-  },
-  platformTask: {
-    title: "3. 플랫폼 부문 과제 수행 점검",
-    gid: "1489781128",
-    type: "table"
-  },
-  newsroomStatus: {
-    title: "4_1. 뉴스룸국 현황",
-    gid: "216245555",
-    type: "table"
-  },
-  newsroomStrategy: {
-    title: "4_2. 뉴스룸국 대응 전략",
-    gid: "630719473",
-    type: "table"
-  },
-  newsroomTasks: {
-    title: "4_3. 뉴스룸국 남은 과제",
-    gid: "1031404324",
-    type: "table"
-  },
-  etc: {
-    title: "5. 기타 협의 사항",
-    gid: "1245395043",
-    type: "table"
-  }
+  overview: { title: "1. 개요", gid: "737075050", type: "table" },
+  dotcomTraffic: { title: "2_1. 닷컴 트래픽 추이", gid: "0", type: "table" },
+  inflowTraffic: { title: "2_2. 닷컴 유입경로별 방문자수 추이", gid: "354858249", type: "horizontalStackedBar" },
+  portalTraffic: { title: "2_3. 외부 포털 트래픽 추이", gid: "2120757618", type: "horizontalLine" },
+  platformTask: { title: "3. 플랫폼 부문 과제 수행 점검", gid: "1489781128", type: "table" },
+  newsroomStatus: { title: "4_1. 뉴스룸국 현황", gid: "216245555", type: "table" },
+  newsroomStrategy: { title: "4_2. 뉴스룸국 대응 전략", gid: "630719473", type: "table" },
+  newsroomTasks: { title: "4_3. 뉴스룸국 남은 과제", gid: "1031404324", type: "table" },
+  etc: { title: "5. 기타 협의 사항", gid: "1245395043", type: "table" }
 };
 
 const dashboardConfig = [
-  {
-    title: "1. 개요",
-    directSheet: sheets.overview
-  },
+  { title: "1. 개요", directSheet: sheets.overview },
   {
     title: "2. 주요 트래픽 추이",
-    children: [
-      sheets.dotcomTraffic,
-      sheets.inflowTraffic,
-      sheets.portalTraffic
-    ]
+    children: [sheets.dotcomTraffic, sheets.inflowTraffic, sheets.portalTraffic]
   },
-  {
-    title: "3. 플랫폼 부문 과제 수행 점검",
-    directSheet: sheets.platformTask
-  },
+  { title: "3. 플랫폼 부문 과제 수행 점검", directSheet: sheets.platformTask },
   {
     title: "4. 뉴스룸국 전략 진행 상황",
-    children: [
-      sheets.newsroomStatus,
-      sheets.newsroomStrategy,
-      sheets.newsroomTasks
-    ]
+    children: [sheets.newsroomStatus, sheets.newsroomStrategy, sheets.newsroomTasks]
   },
-  {
-    title: "5. 기타 협의 사항",
-    directSheet: sheets.etc
-  }
+  { title: "5. 기타 협의 사항", directSheet: sheets.etc }
 ];
 
 const loadedSheets = {};
@@ -89,9 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("loginButton").addEventListener("click", checkPassword);
 
   document.getElementById("passwordInput").addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-      checkPassword();
-    }
+    if (event.key === "Enter") checkPassword();
   });
 
   document.getElementById("openAllButton").addEventListener("click", openAll);
@@ -226,7 +170,6 @@ async function loadSheetIntoContainer(container, sheet, id) {
     const canvasId = `chart-${id}`;
 
     container.innerHTML = `
-      ${renderTable(rows)}
       <div class="chartBox">
         <canvas id="${canvasId}"></canvas>
       </div>
@@ -276,61 +219,128 @@ function renderChart(canvasId, rows, chartType) {
 
   if (headers.length < 2) return;
 
+  if (chartType === "horizontalStackedBar") {
+    renderHorizontalStackedBar(canvasId, headers, body);
+    return;
+  }
+
+  if (chartType === "horizontalLine") {
+    renderHorizontalLine(canvasId, headers, body);
+    return;
+  }
+}
+
+function renderHorizontalStackedBar(canvasId, headers, body) {
+  const labels = body.map(row => row[0]);
+
+  const datasets = headers.slice(1).map((header, index) => ({
+    label: header,
+    data: body.map(row => toNumber(row[index + 1]))
+  }));
+
+  createChart(canvasId, {
+    type: "bar",
+    data: {
+      labels,
+      datasets
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          position: "right"
+        },
+        tooltip: {
+          callbacks: {
+            label: context => {
+              return `${context.dataset.label}: ${formatNumber(context.raw)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          beginAtZero: true,
+          ticks: {
+            callback: value => formatNumber(value)
+          }
+        },
+        y: {
+          stacked: true
+        }
+      }
+    }
+  });
+}
+
+function renderHorizontalLine(canvasId, headers, body) {
   const labels = body.map(row => row[0]);
 
   const datasets = headers.slice(1).map((header, index) => ({
     label: header,
     data: body.map(row => toNumber(row[index + 1])),
-    tension: chartType === "line" ? 0.25 : 0
+    tension: 0.25,
+    pointRadius: 4,
+    pointHoverRadius: 6
   }));
 
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: {
-      mode: "index",
-      intersect: false
-    },
-    plugins: {
-      legend: {
-        position: "bottom"
-      },
-      tooltip: {
-        enabled: true
-      }
-    },
-    scales: {}
-  };
-
-  let type = "line";
-
-  if (chartType === "stackedBar") {
-    type = "bar";
-    options.scales = {
-      x: { stacked: true },
-      y: { stacked: true, beginAtZero: true }
-    };
-  }
-
-  if (chartType === "line") {
-    type = "line";
-    options.scales = {
-      y: { beginAtZero: false }
-    };
-  }
-
-  if (chartInstances[canvasId]) {
-    chartInstances[canvasId].destroy();
-  }
-
-  chartInstances[canvasId] = new Chart(document.getElementById(canvasId), {
-    type,
+  createChart(canvasId, {
+    type: "line",
     data: {
       labels,
       datasets
     },
-    options
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "nearest",
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          position: "top"
+        },
+        tooltip: {
+          callbacks: {
+            label: context => {
+              return `${context.dataset.label}: ${formatNumber(context.raw)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: {
+            callback: value => formatNumber(value)
+          }
+        },
+        y: {
+          reverse: false
+        }
+      }
+    }
   });
+}
+
+function createChart(canvasId, config) {
+  if (chartInstances[canvasId]) {
+    chartInstances[canvasId].destroy();
+  }
+
+  chartInstances[canvasId] = new Chart(
+    document.getElementById(canvasId),
+    config
+  );
 }
 
 function toNumber(value) {
@@ -346,6 +356,10 @@ function toNumber(value) {
 
   const number = Number(cleaned);
   return Number.isFinite(number) ? number : 0;
+}
+
+function formatNumber(value) {
+  return Number(value).toLocaleString("ko-KR");
 }
 
 function formatCell(value) {
