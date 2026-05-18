@@ -5,8 +5,8 @@ const SHEET_ID = "14mOvdmVfVP5ck9L2hKQQppgbFjjYAa3DCfoG2sehQh0";
 const sheets = {
   overview: { title: "1. 개요", gid: "737075050", type: "table" },
   dotcomTraffic: { title: "2_1. 닷컴 트래픽 추이", gid: "0", type: "table" },
-  inflowTraffic: { title: "2_2. 닷컴 유입경로별 방문자수 추이", gid: "354858249", type: "stackedBarWithTable" },
-  portalTraffic: { title: "2_3. 외부 포털 트래픽 추이", gid: "2120757618", type: "lineWithTable" },
+  inflowTraffic: { title: "2_2. 닷컴 유입경로별 방문자수 추이", gid: "354858249", type: "wideStackedBar" },
+  portalTraffic: { title: "2_3. 외부 포털 트래픽 추이", gid: "2120757618", type: "wideLine" },
   platformTask: { title: "3. 플랫폼 부문 과제 수행 점검", gid: "1489781128", type: "table" },
   newsroomStatus: { title: "4_1. 뉴스룸국 현황", gid: "216245555", type: "table" },
   newsroomStrategy: { title: "4_2. 뉴스룸국 대응 전략", gid: "630719473", type: "table" },
@@ -18,20 +18,12 @@ const dashboardConfig = [
   { title: "1. 개요", directSheet: sheets.overview },
   {
     title: "2. 주요 트래픽 추이",
-    children: [
-      sheets.dotcomTraffic,
-      sheets.inflowTraffic,
-      sheets.portalTraffic
-    ]
+    children: [sheets.dotcomTraffic, sheets.inflowTraffic, sheets.portalTraffic]
   },
   { title: "3. 플랫폼 부문 과제 수행 점검", directSheet: sheets.platformTask },
   {
     title: "4. 뉴스룸국 전략 진행 상황",
-    children: [
-      sheets.newsroomStatus,
-      sheets.newsroomStrategy,
-      sheets.newsroomTasks
-    ]
+    children: [sheets.newsroomStatus, sheets.newsroomStrategy, sheets.newsroomTasks]
   },
   { title: "5. 기타 협의 사항", directSheet: sheets.etc }
 ];
@@ -68,6 +60,11 @@ function csvUrl(gid) {
 
 async function fetchSheetRows(gid) {
   const response = await fetch(`${csvUrl(gid)}&cacheBust=${Date.now()}`);
+
+  if (!response.ok) {
+    throw new Error("스프레드시트를 불러오지 못했습니다.");
+  }
+
   const text = await response.text();
 
   const parsed = Papa.parse(text, {
@@ -178,52 +175,15 @@ async function loadSheet(container, sheet, id) {
       </div>
     `;
 
-    if (sheet.type === "stackedBarWithTable") {
-      renderStackedBarFromWideTable(canvasId, rows);
+    if (sheet.type === "wideStackedBar") {
+      renderWideStackedBar(canvasId, rows);
     }
 
-    if (sheet.type === "lineWithTable") {
-      renderLineFromWideTable(canvasId, rows);
-    }
-  } catch (error) {
-    container.innerHTML = `<p class="error">데이터를 불러오지 못했습니다.</p>`;
-  }
-}async function loadSheet(container, sheet, id) {
-  container.innerHTML = `<p class="status">데이터를 불러오는 중입니다.</p>`;
-
-  try {
-    const rows = await fetchSheetRows(sheet.gid);
-
-    if (sheet.type === "table") {
-      container.innerHTML = renderTable(rows);
-      return;
-    }
-
-    const canvasId = `chart-${id}`;
-
-    container.innerHTML = `
-      <div class="chartTableGrid">
-        <div>
-          <h3>${sheet.title}</h3>
-          ${renderTable(rows)}
-        </div>
-        <div>
-          <h3>${sheet.title}</h3>
-          <div class="chartBox">
-            <canvas id="${canvasId}"></canvas>
-          </div>
-        </div>
-      </div>
-    `;
-
-    if (sheet.type === "stackedBarWithTable") {
-      renderStackedBarFromWideTable(canvasId, rows);
-    }
-
-    if (sheet.type === "lineWithTable") {
-      renderLineFromWideTable(canvasId, rows);
+    if (sheet.type === "wideLine") {
+      renderWideLineChart(canvasId, rows);
     }
   } catch (error) {
+    console.error(error);
     container.innerHTML = `<p class="error">데이터를 불러오지 못했습니다.</p>`;
   }
 }
@@ -256,22 +216,84 @@ function renderTable(rows) {
   `;
 }
 
-function renderStackedBar(canvasId, rows) {
-  const headers = rows[0];
-  const body = rows.slice(1);
+function normalizeWideTable(rows) {
+  const monthRowIndex = rows.findIndex(row =>
+    row.some(cell => /^([1-9]|1[0-2])월$/.test(String(cell).trim()))
+  );
 
-  const labels = body.map(row => row[0]);
+  if (monthRowIndex === -1) {
+    console.warn("월 행을 찾지 못했습니다.", rows);
+    return { labels: [], datasets: [] };
+  }
 
-  const datasets = headers.slice(1).map((header, index) => ({
-    label: header,
-    data: body.map(row => toNumber(row[index + 1]))
-  }));
+  const monthRow = rows[monthRowIndex];
+
+  const monthColumns = monthRow
+    .map((cell, index) => ({
+      month: String(cell).trim(),
+      index
+    }))
+    .filter(item => /^([1-9]|1[0-2])월$/.test(item.month));
+
+  const firstMonthIndex = monthColumns[0].index;
+
+  const dataRows = rows.slice(monthRowIndex + 1).filter(row => {
+    const label = findRowLabel(row, firstMonthIndex);
+    if (!label) return false;
+    if (label.includes("증가율")) return false;
+    if (label.includes("추이")) return false;
+
+    const hasNumber = monthColumns.some(col => toNumber(row[col.index]) > 0);
+    return hasNumber;
+  });
+
+  const labels = monthColumns.map(item => item.month);
+
+  const datasets = dataRows.map(row => {
+    const label = findRowLabel(row, firstMonthIndex);
+
+    return {
+      label,
+      data: monthColumns.map(item => toNumber(row[item.index]))
+    };
+  });
+
+  return { labels, datasets };
+}
+
+function findRowLabel(row, firstMonthIndex) {
+  const candidates = row.slice(0, firstMonthIndex);
+
+  for (let i = candidates.length - 1; i >= 0; i--) {
+    const value = String(candidates[i] || "").trim();
+
+    if (!value) continue;
+    if (value.includes("2026")) continue;
+    if (value.includes("2027")) continue;
+    if (value.includes("월")) continue;
+
+    return value;
+  }
+
+  return "";
+}
+
+function renderWideStackedBar(canvasId, rows) {
+  const { labels, datasets } = normalizeWideTable(rows);
+
+  if (!labels.length || !datasets.length) {
+    document.getElementById(canvasId).parentElement.innerHTML =
+      `<p class="error">차트로 변환할 데이터를 찾지 못했습니다.</p>`;
+    return;
+  }
 
   createChart(canvasId, {
     type: "bar",
-    data: { labels, datasets },
+    data: {
+      labels,
+      datasets
+    },
     options: {
-      indexAxis: "y",
       responsive: true,
       maintainAspectRatio: false,
       interaction: {
@@ -279,7 +301,9 @@ function renderStackedBar(canvasId, rows) {
         intersect: false
       },
       plugins: {
-        legend: { position: "right" },
+        legend: {
+          position: "right"
+        },
         tooltip: {
           callbacks: {
             label: ctx => `${ctx.dataset.label}: ${formatNumber(ctx.raw)}`
@@ -302,33 +326,37 @@ function renderStackedBar(canvasId, rows) {
   });
 }
 
-function renderLineChart(canvasId, rows) {
-  const headers = rows[0];
-  const body = rows.slice(1);
+function renderWideLineChart(canvasId, rows) {
+  const { labels, datasets } = normalizeWideTable(rows);
 
-  const labels = body.map(row => row[0]);
-
-  const datasets = headers.slice(1).map((header, index) => ({
-    label: header,
-    data: body.map(row => toNumber(row[index + 1])),
-    tension: 0.25,
-    pointRadius: 3,
-    pointHoverRadius: 6
-  }));
+  if (!labels.length || !datasets.length) {
+    document.getElementById(canvasId).parentElement.innerHTML =
+      `<p class="error">차트로 변환할 데이터를 찾지 못했습니다.</p>`;
+    return;
+  }
 
   createChart(canvasId, {
     type: "line",
-    data: { labels, datasets },
+    data: {
+      labels,
+      datasets: datasets.map(ds => ({
+        ...ds,
+        tension: 0.25,
+        pointRadius: 4,
+        pointHoverRadius: 7
+      }))
+    },
     options: {
-      indexAxis: "y",
       responsive: true,
       maintainAspectRatio: false,
       interaction: {
-        mode: "nearest",
+        mode: "index",
         intersect: false
       },
       plugins: {
-        legend: { position: "right" },
+        legend: {
+          position: "top"
+        },
         tooltip: {
           callbacks: {
             label: ctx => `${ctx.dataset.label}: ${formatNumber(ctx.raw)}`
@@ -336,33 +364,39 @@ function renderLineChart(canvasId, rows) {
         }
       },
       scales: {
-        x: {
+        y: {
           beginAtZero: true,
           ticks: {
             callback: value => formatNumber(value)
           }
-        },
-        y: {}
+        }
       }
     }
   });
 }
 
 function createChart(canvasId, config) {
+  const canvas = document.getElementById(canvasId);
+
+  if (!canvas) {
+    console.error("canvas를 찾지 못했습니다:", canvasId);
+    return;
+  }
+
   if (chartInstances[canvasId]) {
     chartInstances[canvasId].destroy();
   }
 
-  chartInstances[canvasId] = new Chart(
-    document.getElementById(canvasId),
-    config
-  );
+  chartInstances[canvasId] = new Chart(canvas, config);
 }
 
 function toNumber(value) {
-  if (!value || value === "-") return 0;
+  if (value === undefined || value === null) return 0;
 
-  const cleaned = String(value)
+  const raw = String(value).trim();
+  if (!raw || raw === "-") return 0;
+
+  const cleaned = raw
     .replaceAll(",", "")
     .replaceAll("%", "")
     .replaceAll("명", "")
@@ -412,125 +446,5 @@ async function openAll() {
 function closeAll() {
   document.querySelectorAll(".accordion, .subAccordion").forEach(el => {
     el.classList.remove("open");
-  });
-}
-
-function normalizeWideTable(rows) {
-  const monthRowIndex = rows.findIndex(row =>
-    row.some(cell => /월$/.test(String(cell).trim()))
-  );
-
-  if (monthRowIndex === -1) {
-    return { labels: [], datasets: [] };
-  }
-
-  const monthRow = rows[monthRowIndex];
-
-  const monthColumns = monthRow
-    .map((cell, index) => ({
-      month: String(cell).trim(),
-      index
-    }))
-    .filter(item => /월$/.test(item.month));
-
-  const dataRows = rows
-    .slice(monthRowIndex + 1)
-    .filter(row => {
-      const name = String(row[0] || "").trim();
-      return name !== "" && !name.includes("증가율");
-    });
-
-  const labels = monthColumns.map(item => item.month);
-
-  const datasets = dataRows.map(row => ({
-    label: String(row[0]).trim(),
-    data: monthColumns.map(item => toNumber(row[item.index]))
-  }));
-
-  return { labels, datasets };
-}
-
-function renderStackedBarFromWideTable(canvasId, rows) {
-  const { labels, datasets } = normalizeWideTable(rows);
-
-  createChart(canvasId, {
-    type: "bar",
-    data: {
-      labels,
-      datasets
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: "index",
-        intersect: false
-      },
-      plugins: {
-        legend: {
-          position: "right"
-        },
-        tooltip: {
-          callbacks: {
-            label: ctx => `${ctx.dataset.label}: ${formatNumber(ctx.raw)}`
-          }
-        }
-      },
-      scales: {
-        x: {
-          stacked: true
-        },
-        y: {
-          stacked: true,
-          beginAtZero: true,
-          ticks: {
-            callback: value => formatNumber(value)
-          }
-        }
-      }
-    }
-  });
-}
-
-function renderLineFromWideTable(canvasId, rows) {
-  const { labels, datasets } = normalizeWideTable(rows);
-
-  createChart(canvasId, {
-    type: "line",
-    data: {
-      labels,
-      datasets: datasets.map(ds => ({
-        ...ds,
-        tension: 0.25,
-        pointRadius: 3,
-        pointHoverRadius: 6
-      }))
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: "index",
-        intersect: false
-      },
-      plugins: {
-        legend: {
-          position: "top"
-        },
-        tooltip: {
-          callbacks: {
-            label: ctx => `${ctx.dataset.label}: ${formatNumber(ctx.raw)}`
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: value => formatNumber(value)
-          }
-        }
-      }
-    }
   });
 }
