@@ -1,4 +1,5 @@
 const APP_PASSWORD = "hankook2026";
+// 원하는 비밀번호로 바꾸세요.
 
 const SHEET_ID = "14mOvdmVfVP5ck9L2hKQQppgbFjjYAa3DCfoG2sehQh0";
 
@@ -81,15 +82,10 @@ const dashboardConfig = [
   }
 ];
 
+const loadedSheets = {};
 const chartInstances = {};
 
 document.addEventListener("DOMContentLoaded", () => {
-  const savedLogin = sessionStorage.getItem("hankookTrafficLogin");
-
-  if (savedLogin === "yes") {
-    showApp();
-  }
-
   document.getElementById("loginButton").addEventListener("click", checkPassword);
 
   document.getElementById("passwordInput").addEventListener("keydown", event => {
@@ -106,7 +102,6 @@ function checkPassword() {
   const input = document.getElementById("passwordInput").value.trim();
 
   if (input === APP_PASSWORD) {
-    sessionStorage.setItem("hankookTrafficLogin", "yes");
     showApp();
   } else {
     document.getElementById("loginMessage").innerText = "비밀번호가 틀렸습니다.";
@@ -114,8 +109,8 @@ function checkPassword() {
 }
 
 function showApp() {
-  document.getElementById("loginScreen").classList.add("hidden");
-  document.getElementById("appScreen").classList.remove("hidden");
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("appScreen").style.display = "block";
   renderDashboard();
 }
 
@@ -124,8 +119,7 @@ function csvUrl(gid) {
 }
 
 async function fetchSheetRows(gid) {
-  const url = `${csvUrl(gid)}&cacheBust=${Date.now()}`;
-  const response = await fetch(url);
+  const response = await fetch(`${csvUrl(gid)}&cacheBust=${Date.now()}`);
 
   if (!response.ok) {
     throw new Error("스프레드시트를 불러오지 못했습니다.");
@@ -146,7 +140,7 @@ function cleanRows(rows) {
     .filter(row => row.some(cell => cell !== ""));
 }
 
-async function renderDashboard() {
+function renderDashboard() {
   const dashboard = document.getElementById("dashboard");
   dashboard.innerHTML = "";
 
@@ -164,44 +158,29 @@ async function renderDashboard() {
     const body = document.createElement("div");
     body.className = "accordionBody";
 
-    header.addEventListener("click", () => {
+    header.addEventListener("click", async () => {
       accordion.classList.toggle("open");
+
+      if (section.directSheet && !loadedSheets[section.directSheet.title]) {
+        loadedSheets[section.directSheet.title] = true;
+        await loadSheetIntoContainer(body, section.directSheet, `section-${sectionIndex}`);
+      }
     });
 
     accordion.appendChild(header);
     accordion.appendChild(body);
     dashboard.appendChild(accordion);
 
-    if (section.directSheet) {
-      renderDirectSheet(body, section.directSheet, `section-${sectionIndex}`);
-    }
-
     if (section.children) {
       section.children.forEach((sheet, childIndex) => {
         renderSubAccordion(body, sheet, `section-${sectionIndex}-${childIndex}`);
       });
     }
-  });
-}
 
-async function renderDirectSheet(container, sheet, id) {
-  const content = document.createElement("div");
-  content.className = "sheetContent";
-  content.innerHTML = `<p class="status">데이터를 불러오는 중입니다.</p>`;
-  container.appendChild(content);
-
-  try {
-    const rows = await fetchSheetRows(sheet.gid);
-    content.innerHTML = renderTable(rows);
-
-    if (sheet.type !== "table") {
-      const canvasId = `chart-${id}`;
-      content.insertAdjacentHTML("beforeend", `<canvas id="${canvasId}"></canvas>`);
-      renderChart(canvasId, rows, sheet.type);
+    if (section.directSheet) {
+      body.innerHTML = `<p class="status">제목을 누르면 데이터를 불러옵니다.</p>`;
     }
-  } catch (error) {
-    content.innerHTML = `<p class="error">${error.message}</p>`;
-  }
+  });
 }
 
 function renderSubAccordion(container, sheet, id) {
@@ -217,39 +196,46 @@ function renderSubAccordion(container, sheet, id) {
 
   const body = document.createElement("div");
   body.className = "subAccordionBody";
-  body.innerHTML = `<p class="status">항목을 누르면 데이터를 불러옵니다.</p>`;
-
-  let loaded = false;
+  body.innerHTML = `<p class="status">소제목을 누르면 데이터를 불러옵니다.</p>`;
 
   header.addEventListener("click", async () => {
     sub.classList.toggle("open");
 
-    if (!loaded) {
-      loaded = true;
-      body.innerHTML = `<p class="status">데이터를 불러오는 중입니다.</p>`;
-
-      try {
-        const rows = await fetchSheetRows(sheet.gid);
-
-        if (sheet.type === "table") {
-          body.innerHTML = renderTable(rows);
-        } else {
-          const canvasId = `chart-${id}`;
-          body.innerHTML = `
-            ${renderTable(rows)}
-            <canvas id="${canvasId}"></canvas>
-          `;
-          renderChart(canvasId, rows, sheet.type);
-        }
-      } catch (error) {
-        body.innerHTML = `<p class="error">${error.message}</p>`;
-      }
+    if (!loadedSheets[sheet.title]) {
+      loadedSheets[sheet.title] = true;
+      await loadSheetIntoContainer(body, sheet, id);
     }
   });
 
   sub.appendChild(header);
   sub.appendChild(body);
   container.appendChild(sub);
+}
+
+async function loadSheetIntoContainer(container, sheet, id) {
+  container.innerHTML = `<p class="status">데이터를 불러오는 중입니다.</p>`;
+
+  try {
+    const rows = await fetchSheetRows(sheet.gid);
+
+    if (sheet.type === "table") {
+      container.innerHTML = renderTable(rows);
+      return;
+    }
+
+    const canvasId = `chart-${id}`;
+
+    container.innerHTML = `
+      ${renderTable(rows)}
+      <div class="chartBox">
+        <canvas id="${canvasId}"></canvas>
+      </div>
+    `;
+
+    renderChart(canvasId, rows, sheet.type);
+  } catch (error) {
+    container.innerHTML = `<p class="error">${error.message}</p>`;
+  }
 }
 
 function renderTable(rows) {
@@ -292,13 +278,11 @@ function renderChart(canvasId, rows, chartType) {
 
   const labels = body.map(row => row[0]);
 
-  const datasets = headers.slice(1).map((header, index) => {
-    return {
-      label: header,
-      data: body.map(row => toNumber(row[index + 1])),
-      tension: chartType === "line" ? 0.25 : 0
-    };
-  });
+  const datasets = headers.slice(1).map((header, index) => ({
+    label: header,
+    data: body.map(row => toNumber(row[index + 1])),
+    tension: chartType === "line" ? 0.25 : 0
+  }));
 
   const options = {
     responsive: true,
@@ -323,22 +307,15 @@ function renderChart(canvasId, rows, chartType) {
   if (chartType === "stackedBar") {
     type = "bar";
     options.scales = {
-      x: {
-        stacked: true
-      },
-      y: {
-        stacked: true,
-        beginAtZero: true
-      }
+      x: { stacked: true },
+      y: { stacked: true, beginAtZero: true }
     };
   }
 
   if (chartType === "line") {
     type = "line";
     options.scales = {
-      y: {
-        beginAtZero: false
-      }
+      y: { beginAtZero: false }
     };
   }
 
@@ -368,7 +345,6 @@ function toNumber(value) {
     .trim();
 
   const number = Number(cleaned);
-
   return Number.isFinite(number) ? number : 0;
 }
 
@@ -385,16 +361,44 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function openAll() {
-  document.querySelectorAll(".accordion, .subAccordion").forEach(el => {
+async function openAll() {
+  document.querySelectorAll(".accordion").forEach(el => {
     el.classList.add("open");
   });
 
-  document.querySelectorAll(".subAccordionHeader").forEach(button => {
-    button.click();
-    const parent = button.closest(".subAccordion");
-    parent.classList.add("open");
+  for (const [sectionIndex, section] of dashboardConfig.entries()) {
+    if (section.directSheet && !loadedSheets[section.directSheet.title]) {
+      const accordion = document.querySelectorAll(".accordion")[sectionIndex];
+      const body = accordion.querySelector(".accordionBody");
+      loadedSheets[section.directSheet.title] = true;
+      await loadSheetIntoContainer(body, section.directSheet, `section-${sectionIndex}`);
+    }
+  }
+
+  document.querySelectorAll(".subAccordion").forEach(el => {
+    el.classList.add("open");
   });
+
+  const subButtons = document.querySelectorAll(".subAccordionHeader");
+
+  for (const [index, button] of subButtons.entries()) {
+    const sub = button.closest(".subAccordion");
+    const body = sub.querySelector(".subAccordionBody");
+
+    let count = 0;
+
+    for (const section of dashboardConfig) {
+      if (!section.children) continue;
+
+      for (const sheet of section.children) {
+        if (count === index && !loadedSheets[sheet.title]) {
+          loadedSheets[sheet.title] = true;
+          await loadSheetIntoContainer(body, sheet, `open-${index}`);
+        }
+        count++;
+      }
+    }
+  }
 }
 
 function closeAll() {
