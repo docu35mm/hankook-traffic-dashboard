@@ -290,3 +290,42 @@ td {
     padding: 10px;
   }
 }
+
+.chartTableGrid {
+  display: grid;
+  grid-template-columns: 0.95fr 1.15fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.chartTableGrid h3 {
+  margin: 0 0 12px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.chartBox {
+  height: 360px;
+  width: 100%;
+}
+
+.chartTableGrid table {
+  font-size: 13px;
+}
+
+.chartTableGrid th,
+.chartTableGrid td {
+  padding: 7px 9px;
+  text-align: center;
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .chartTableGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .chartBox {
+    height: 420px;
+  }
+}
