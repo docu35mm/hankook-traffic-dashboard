@@ -9,13 +9,13 @@ const sheets = {
   inflowTraffic: {
     title: "2_2. 닷컴 유입경로별 방문자수 추이",
     gid: "354858249",
-    type: "wideStackedBar"
+    type: "stackedBar"
   },
 
   portalTraffic: {
     title: "2_3. 외부 포털 트래픽 추이",
     gid: "2120757618",
-    type: "wideLine"
+    type: "line"
   },
 
   platformTask: { title: "3. 플랫폼 부문 과제 수행 점검", gid: "1489781128", type: "table" },
@@ -78,8 +78,7 @@ function csvUrl(gid) {
 }
 
 async function fetchSheetRows(gid) {
-  const url = `${csvUrl(gid)}&cacheBust=${Date.now()}`;
-  const response = await fetch(url);
+  const response = await fetch(`${csvUrl(gid)}&cacheBust=${Date.now()}`);
 
   if (!response.ok) {
     throw new Error("스프레드시트를 불러오지 못했습니다.");
@@ -88,7 +87,7 @@ async function fetchSheetRows(gid) {
   const text = await response.text();
 
   const parsed = Papa.parse(text, {
-    skipEmptyLines: false
+    skipEmptyLines: true
   });
 
   return parsed.data
@@ -198,12 +197,12 @@ async function loadSheet(container, sheet, id) {
     `;
 
     requestAnimationFrame(() => {
-      if (sheet.type === "wideStackedBar") {
-        renderWideStackedBar(canvasId, rows);
+      if (sheet.type === "stackedBar") {
+        renderStackedBar(canvasId, rows);
       }
 
-      if (sheet.type === "wideLine") {
-        renderWideLineChart(canvasId, rows);
+      if (sheet.type === "line") {
+        renderLineChart(canvasId, rows);
       }
     });
   } catch (error) {
@@ -218,6 +217,7 @@ function renderTable(rows) {
   }
 
   const maxLength = Math.max(...rows.map(row => row.length));
+
   const normalized = rows.map(row => {
     const copy = [...row];
     while (copy.length < maxLength) copy.push("");
@@ -247,84 +247,28 @@ function renderTable(rows) {
   `;
 }
 
-/**
- * 현재 시트 구조 대응:
- * - 첫 행 근처에 제목이 있음
- * - 어느 행에 3월, 4월, 5월... 같은 월 헤더가 가로로 있음
- * - 월 헤더 아래 행에 네이버/다음/구글/직접유입/한국일보/기타 같은 항목이 있음
- */
-function normalizeWideTable(rows) {
-  const monthRegex = /^([1-9]|1[0-2])월$/;
-
-  const monthRowIndex = rows.findIndex(row =>
-    row.some(cell => monthRegex.test(String(cell).trim()))
-  );
-
-  if (monthRowIndex === -1) {
-    console.warn("월 행을 찾지 못했습니다.", rows);
+function normalizeStandardTable(rows) {
+  if (!rows || rows.length < 2) {
     return { labels: [], datasets: [] };
   }
 
-  const monthRow = rows[monthRowIndex];
+  const headers = rows[0];
+  const body = rows.slice(1);
 
-  const monthColumns = monthRow
-    .map((cell, index) => ({
-      month: String(cell).trim(),
-      index
-    }))
-    .filter(item => monthRegex.test(item.month));
+  const labels = body.map(row => row[0]);
 
-  if (monthColumns.length === 0) {
-    return { labels: [], datasets: [] };
-  }
-
-  const firstMonthIndex = monthColumns[0].index;
-
-  const dataRows = rows.slice(monthRowIndex + 1).filter(row => {
-    const label = findSeriesLabel(row, firstMonthIndex);
-    if (!label) return false;
-    if (label.includes("증가율")) return false;
-    if (label.includes("추이")) return false;
-    if (label.includes("2026")) return false;
-    if (label.includes("2027")) return false;
-
-    return monthColumns.some(col => {
-      const raw = String(row[col.index] || "").trim();
-      return raw !== "" && raw !== "-";
-    });
+  const datasets = headers.slice(1).map((header, index) => {
+    return {
+      label: header,
+      data: body.map(row => toNumber(row[index + 1]))
+    };
   });
-
-  const labels = monthColumns.map(item => item.month);
-
-  const datasets = dataRows.map(row => ({
-    label: findSeriesLabel(row, firstMonthIndex),
-    data: monthColumns.map(item => toNumber(row[item.index]))
-  }));
-
-  console.log("차트 변환 결과", { labels, datasets });
 
   return { labels, datasets };
 }
 
-function findSeriesLabel(row, firstMonthIndex) {
-  const leftCells = row.slice(0, firstMonthIndex);
-
-  for (let i = leftCells.length - 1; i >= 0; i--) {
-    const value = String(leftCells[i] || "").trim();
-
-    if (!value) continue;
-    if (value.includes("2026")) continue;
-    if (value.includes("2027")) continue;
-    if (value.endsWith("월")) continue;
-
-    return value;
-  }
-
-  return "";
-}
-
-function renderWideStackedBar(canvasId, rows) {
-  const { labels, datasets } = normalizeWideTable(rows);
+function renderStackedBar(canvasId, rows) {
+  const { labels, datasets } = normalizeStandardTable(rows);
 
   if (!labels.length || !datasets.length) {
     showChartError(canvasId);
@@ -370,8 +314,8 @@ function renderWideStackedBar(canvasId, rows) {
   });
 }
 
-function renderWideLineChart(canvasId, rows) {
-  const { labels, datasets } = normalizeWideTable(rows);
+function renderLineChart(canvasId, rows) {
+  const { labels, datasets } = normalizeStandardTable(rows);
 
   if (!labels.length || !datasets.length) {
     showChartError(canvasId);
@@ -439,7 +383,7 @@ function showChartError(canvasId) {
 
   canvas.parentElement.innerHTML = `
     <p class="error">
-      차트로 변환할 데이터를 찾지 못했습니다. 월 행과 항목 행을 확인해 주세요.
+      차트로 변환할 데이터를 찾지 못했습니다. 첫 번째 열은 월, 두 번째 열부터는 숫자 데이터인지 확인해 주세요.
     </p>
   `;
 }
